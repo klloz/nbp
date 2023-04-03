@@ -3,7 +3,10 @@
 namespace App\Finance\Currency\Application\Service\Nbp;
 
 use App\Finance\Currency\Application\Exception\InvalidResponseException;
+use App\Finance\Currency\Application\Exception\InvalidTableException;
+use App\Finance\Currency\Application\Exception\NoExchangeRatesForDateException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class NbpClient
@@ -15,11 +18,17 @@ final readonly class NbpClient
     {
     }
 
+    /**
+     * @throws ExceptionInterface
+     * @throws NoExchangeRatesForDateException
+     * @throws InvalidTableException
+     * @throws InvalidResponseException
+     * @throws TransportExceptionInterface
+     */
     public function getExchangeRates(string $table, \DateTimeInterface $date): array
     {
         if (!in_array($table, self::AVAILABLE_TABLES)) {
-            # todo throw dedicated exception
-            throw new \Exception();
+            throw new InvalidTableException();
         }
 
         $url = sprintf(
@@ -33,7 +42,9 @@ final readonly class NbpClient
             $response = $this->httpClient->request('GET', $url);
             $data = json_decode($response->getContent(), true);
         } catch (ExceptionInterface $e) {
-            # todo throw dedicated exception when no data
+            if ($e->getCode() === 404) {
+                throw new NoExchangeRatesForDateException();
+            }
 
             throw $e;
         }
@@ -48,13 +59,17 @@ final readonly class NbpClient
      */
     private function validateExchangeRatesResponse(array $data): void
     {
+        $expectedKeys = ['currency', 'code', 'mid'];
         $data = $data[0]['rates'] ?? null;
 
         if (!$data) {
-            # todo throw dedicated exception
-            throw new \Exception();
+            throw new InvalidResponseException();
         }
 
-        # todo check nested arrays
+        foreach ($data as $item) {
+            if (!empty(array_diff(array_keys($item), $expectedKeys))) {
+                throw new InvalidResponseException();
+            }
+        }
     }
 }
