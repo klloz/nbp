@@ -15,23 +15,25 @@ readonly class NbpService
 
     public function loadExchangeRates(?\DateTimeInterface $date = null): void
     {
+        $date = $date ?? new \DateTimeImmutable();
         try {
-            $ratesRaw = $this->nbpClient->getExchangeRates(
-                self::DEFAULT_TABLE,
-                $date ?? new \DateTimeImmutable()
-            );
+            $ratesRaw = $this->nbpClient->getExchangeRates(self::DEFAULT_TABLE, $date);
         } catch (\Throwable $e) {
             # todo
             return;
         }
 
-        foreach ($ratesRaw as $rawData) {
+        foreach ($ratesRaw['rates'] as $rawData) {
             if ($currency = $this->currencyRepository->findByISO($rawData['code'], $date)) {
                 $currency->update($this->currencyRepository, $rawData['currency'], $rawData['mid']);
+
+                continue;
             }
+
+            $rawData['effectiveDate'] = $ratesRaw['effectiveDate'];
+            Currency::fromRawData($this->currencyRepository, $rawData);
         }
 
-        $rawData['effectiveDate'] = $ratesRaw['effectiveDate'];
-        Currency::fromRawData($this->currencyRepository, $rawData);
+        $this->currencyRepository->flush();
     }
 }

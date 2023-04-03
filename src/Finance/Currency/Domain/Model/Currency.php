@@ -10,7 +10,7 @@ use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Uid\UuidV4;
 
 #[ORM\Entity(repositoryClass: CurrencyRepositoryContract::class)]
-#[ORM\Index(columns: ['currency_code', 'date'], name: 'unique_currency_per_date')]
+#[ORM\UniqueConstraint(name: 'unique_currency_per_date', columns: ['currency_code', 'date'])]
 class Currency implements CurrencyContract
 {
     #[ORM\Id]

@@ -6,7 +6,7 @@ use App\Finance\Currency\Domain\Model\Currency;
 
 interface CurrencyRepositoryContract
 {
-    public function findByISO(mixed $code, ?\DateTimeInterface $date): ?Currency;
+    public function findByISO(string $code, \DateTimeInterface $date): ?Currency;
 
     public function store(Currency $model): self;
 
